@@ -1,6 +1,5 @@
 /img/
 /ignore/
-/data/
 *.rar
 *.pyc
 */*pycache*/*
