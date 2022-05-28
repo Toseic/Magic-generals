@@ -3,6 +3,18 @@ import numpy as np
 
 sys.path.append("./general/")
 
+square_9 = [
+    [
+         1, 1, 1,
+         0,    0,
+        -1,-1,-1,
+    ],[
+        -1, 0, 1,
+        -1,    1,
+        -1, 0, 1,
+    ]
+]
+
 class Place(enum.Enum):
     null = -2
     mountain = -1
@@ -85,6 +97,19 @@ class G_game():
             self.armies_free_map[coord] = self.cityArmies[index]*-1
             self.belong_map[coord] = 5
 
+    def sum_army(self):
+        num = [0,0,0,0]
+        for i1 in [0,1]:
+            for i in range(25):
+                num[i1] += np.sum(self.users_map[i1][i])
+                num[i1] += np.sum(self.armies_user_map[i1][i])
+
+                island = np.int32(self.users_map[i1][i] + self.armies_user_map[i1][i]) > np.zeros((1,25))
+                lands = np.sum(island)
+                if lands > 0:
+                    num[i1+2] += lands
+        return num
+
     def place_check(self,coord):
         if type(coord) == int: 
             coord = self.coord_comp(coord)
@@ -105,6 +130,26 @@ class G_game():
         if self.belong_map[coord] == 1:
             return Place.occupy_2
         return Place.null
+
+
+        
+
+    def mask(self, user: int):
+        if user not in [0,1]:
+            raise "Parameter Error: user<{}>".format(user)
+        mask = np.zeros((25,25),np.int8)
+        for i in range(25):
+            for j in range(25):
+                if self.belong_map[(i,j)] in [user, user+3, user+6]: #square
+                    mask[(i,j)] = 1
+                    for index,i_move in enumerate(square_9[0]):
+                        new_i = i + i_move
+                        new_j = j + square_9[1][index]
+                        if in_map((new_i,new_j)):
+                            mask[(new_i,new_j)] = 1
+        return mask
+
+                    
 
     def add_per_turn(self):
         for i in range(self.height):
@@ -213,3 +258,12 @@ class G_game():
                 self.gameover = [True,user]
                 self.win(user)
                 
+
+
+def in_map(coord: tuple) -> bool:
+    return (
+        coord[0] >= 0 and 
+        coord[1] >= 0 and 
+        coord[0] < 25 and 
+        coord[1] < 25
+    )
