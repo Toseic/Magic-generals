@@ -3,3 +3,4 @@
 *.rar
 *.pyc
 */*pycache*/*
+*data_all*
