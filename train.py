@@ -3,7 +3,7 @@ from os.path import exists
 from random import sample
 from time import time
 from gc import collect
-from numpy import load
+from numpy import arange, load
 import torch, torch.nn as nn
 from torch.nn.functional import softmax
 from torch.optim import AdamW
@@ -13,7 +13,7 @@ from prefetch_generator import BackgroundGenerator
 import sys,os,requests
 
 lr = 4e-4
-batch = 480
+batch = 96
 epoch = 12
 rep = (100,50)
 
@@ -53,26 +53,27 @@ class gl_model(nn.Module):
 
 
 class dataset(Dataset):
-    idxs = []
-    def __init__(self, state: str) -> None:
+    idxs = range(1,12)
+    def __init__(self, state: str):
+        
         super(dataset, self).__init__()
-        local_path = "/dataset/{}_".format(state)
+        local_path = "/gl_data/{}_".format(state)
         self.inputs, self.masks, self.labels = [],[],[]
         choose = sample(dataset.idxs, 1)
         print("pack", end = ' ')
         for k in choose:
             print(k, end = ' ')
             self.inputs.extend([torch.from_numpy(f) for f in 
-                load(local_path + "input_{}.npz".format(k)) ])
+                load(local_path + "input_{}.npz".format(k), allow_pickle=True)['inputs'] ])
             self.masks.extend([torch.from_numpy(f) for f in 
-                load(local_path + "mask_{}.npz".format(k)) ])
+                load(local_path + "mask_{}.npz".format(k), allow_pickle=True)['masks'] ])
             self.labels.extend([torch.from_numpy(f) for f in 
-                load(local_path + "label_{}.npz".format(k)) ])
+                load(local_path + "label_{}.npz".format(k), allow_pickle=True)['labels'] ])
         self.len = len(self.labels)
         assert len(self.labels) == len(self.inputs), "data error[0]"
         assert len(self.labels) == len(self.masks), "data error[1]"
         message = "{} sample = {}".format(state, self.len)
-        print(message), 
+        print('\n'+message), 
         # file.write(message+"\n")
     def __getitem__(self, index):
         return self.inputs[index],self.masks[index],self.labels[index]
@@ -84,11 +85,7 @@ class Loader(DataLoader):
     def __iter__(self):
         return BackgroundGenerator(super().__iter__())
 
-def softmax_(ten: torch.Tensor):
-	shape_ = list(ten.shape)
-	ten = ten.reshape(tuple(shape_[:-2]+[shape_[-1]*shape_[-2],]))
-	ten = softmax(ten, dim = -1)
-	ten = ten.reshape(shape_)
+
 
 def training(train):
     print("train batch num=",len(train))
@@ -99,25 +96,67 @@ def training(train):
         inputs, masks, labels = sample
         inputs = inputs.cuda().float()
         masks = masks.cuda().float()
-        labels = labels.cuda().flaot()
+        labels = labels.cuda().float()
         output = model(inputs)
         output[:,0,:,:] = torch.mul(output[:,0,:,:], masks)
         output[:,1,:,:] = torch.mul(output[:,1,:,:], cross_mask)
-        output_shape = output.shape
+        output_shape = list(output.shape)
         output = output.reshape(output_shape[:-2]+[25*25,]).detach()
         ans = torch.argmax(softmax(output,dim = -1), dim=-1)
+        print(output.shape,labels.shape)
         loss = lossfunc(output, labels)
-        
-        # point: mask? killed?  TODO
+        loss.requires_grad_(True)
+        loss.backward()
+        optimizer.step()
+        avaloss += loss.item()
+        labels_ans = torch.argmax(softmax(labels,dim = -1), dim=-1)
+        acc += (ans == labels_ans).sum().item()
+        if not i % rep[0]:
+            avaloss /= rep[0]
+            acc *= 100 / rep[0] / batch
+            s = "[Epoch %2d, Data %4d] loss = %.2e acc = %2.2f%% lr = %.0e" % \
+                (k, i, avaloss, acc, optimizer.param_groups[0]["lr"])
+            print(s,end=""), file.write(s + "\n")
+            avaloss, acc = 0.0, 0
 
-
+def testing(test):
+    print("test batch num =", len(test))
+    allacc, acc, allloss, avaloss = 0, 0, 0.0, 0.0
+    with torch.no_grad():
+        for i, sample in enumerate(test, 1):
+            inputs, masks, labels = sample
+            inputs = inputs.cuda().float()
+            masks = masks.cuda().float()
+            labels = labels.cuda().float()
+            output = model(inputs)
+            output[:,0,:,:] = torch.mul(output[:,0,:,:], masks)
+            output[:,1,:,:] = torch.mul(output[:,1,:,:], cross_mask)
+            output_shape = list(output.shape)
+            output = output.reshape(output_shape[:-2]+[25*25,]).detach()
+            ans = torch.argmax(softmax(output,dim = -1), dim=-1)
+            loss = lossfunc(output, labels)
+            avaloss += loss
+            acc += (ans == labels).sum().item()
+            if not i % rep[1]:
+                allacc += acc
+                allloss += avaloss
+                s = "%3d loss = %.2e, acc = %.2f%%" % \
+                    (i, avaloss / rep[1], 100 * acc / rep[1] / batch)
+                print(s,end="\n"), file.write(s + "\n")
+                acc, avaloss = 0, 0.0
+        allacc += acc
+        allloss += avaloss
+    s = "avaloss = %.2e, total acc = %.2f%%" %\
+         (allloss / len(test), 100 * allacc / len(test) / batch)
+    print(s+'\n'), file.write(s + "\n")
 
 
 if __name__ == '__main__':
     file = open("./gl.txt", "a+")
     dst = "./gl.pth"
-    cross_mask = torch.zeros((25,25))
+    cross_mask = torch.zeros((25,25)).cuda()
     cross_mask[(12,11)],cross_mask[(12,13)],cross_mask[(11,12)],cross_mask[(13,12)] = 1,1,1,1
+    cross_mask.requires_grad_(True)
     model = gl_model().cuda()
     optimizer = AdamW(model.parameters(), lr, weight_decay=1e-4)
     scheduler = CosineAnnealingLR(optimizer, 5, 1e-6)
@@ -131,9 +170,20 @@ if __name__ == '__main__':
         trained = 0
     lossfunc = nn.CrossEntropyLoss()
     if trained < epoch:
-        print("trainint starting....")
+        print("training starting....")
         st = time()
         for k in range(trained + 1, epoch + 1):
             s = "Epoch {}".format(k)
             print(s), file.write(s+'\n')
             training(Loader(dataset("train"), batch, True))
+            testing(Loader(dataset("test"), batch))
+            scheduler.step()
+            torch.cuda.empty_cache()
+            state = {"net": model.state_dict(), "optim": optimizer.state_dict(), 
+                "sch": scheduler.state_dict(), "epoch": k}
+            torch.save(state, dst)
+            print("model saved after %d epoch" % k)
+            print("time = %d h %d min %d s\n" % (int((time() - st) / 3600), 
+                (int(time() - st) / 60) % 60, (time() - st) % 60))
+            file.flush()
+    file.close() 
