@@ -4,3 +4,5 @@
 *.pyc
 */*pycache*/*
 *data_all*
+*.zip
+/.vscode/

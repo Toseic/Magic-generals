@@ -1,7 +1,7 @@
 import os,sys,json,enum,time
 import numpy as np
 
-sys.path.append("./general/")
+# sys.path.append("./general/")
 
 square_9 = [
     [
@@ -12,6 +12,18 @@ square_9 = [
         -1, 0, 1,
         -1,    1,
         -1, 0, 1,
+    ]
+]
+
+square_4 = [
+    [
+            1,
+         0,    0,
+           -1,
+    ],[
+            0,
+        -1,    1,
+            0,
     ]
 ]
 
@@ -134,7 +146,7 @@ class G_game():
 
         
 
-    def mask(self, user: int):
+    def maskL1(self, user: int):
         if user not in [0,1]:
             raise "Parameter Error: user<{}>".format(user)
         mask = np.zeros((25,25),np.int8)
@@ -149,6 +161,26 @@ class G_game():
                             mask[(new_i,new_j)] = 1
         return mask
 
+    def maskL2__(self, beg):
+        return 
+        mask = np.zeros((25,25), np.int8)
+        if type(beg) == int:
+            beg = self.coord_comp(beg)
+        for index, move_i in enumerate(square_4[0]):
+            new_i = beg[0] + move_i
+            new_j = beg[1] + square_4[1][index]
+            if in_map((new_i,new_j)):
+                mask[new_i][new_j] = 1
+        return mask
+
+    def maskL2___(self, move):
+        return
+        [_, beg, end, _, _] = move
+        beg = self.coord_comp(beg)
+        end = self.coord_comp(end)
+        mask = np.zeros((25,25), np.int8)
+        mask[(12+end[0]-beg[0], 12+end[1]-beg[0])] = 1
+        return mask
                     
 
     def add_per_turn(self):

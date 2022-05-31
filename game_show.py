@@ -69,14 +69,13 @@ if __name__ == '__main__':
         data['mountains'],
     )
     game.init_work()
-    turn = -1
+    turn = 0
     point = 0
     while True:
         if game.gameover[0]:
             break
         else:
             print('\033c',end='')
-        turn += 1
         if turn != 0 :
             if turn % 2 == 0:
                 game.add_per_turn()
@@ -97,6 +96,7 @@ if __name__ == '__main__':
             move_info = data["moves"][point]
         # if turn >= 140:
         a = input("pause:")
+        turn += 1
     num = game.sum_army()
 
 # show(game)
