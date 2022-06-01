@@ -101,8 +101,6 @@
 这个版本的UI仅仅只是用于调试，可以拿来复现已有的对局，赛博朋克风格（X
 
 不支持人类输入
-![img1](https://user-images.githubusercontent.com/97432569/171473506-ad83a3e1-8dab-4e61-add6-134b78cc78ce.gif)
-
 
 ### 极致色彩：
 
