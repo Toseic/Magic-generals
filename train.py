@@ -13,8 +13,8 @@ from prefetch_generator import BackgroundGenerator
 import sys,os,requests
 
 lr = 4e-4
-batch = 96
-epoch = 12
+batch = 1024
+epoch = 48
 rep = (100,50)
 
 
@@ -24,9 +24,9 @@ class resblock(nn.Module):
     def __init__(self, channel: int) -> None:
         super(resblock, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv2d(channel, channel, (3,3), padding=(1,1), bias=False), 
+            nn.Conv2d(channel, channel, (3,3), padding=(1,1), bias=True), 
             nn.BatchNorm2d(channel),
-            nn.Conv2d(channel, channel, (3,3), padding=(1,1), bias=False), 
+            nn.Conv2d(channel, channel, (3,3), padding=(1,1), bias=True), 
             nn.BatchNorm2d(channel),
         )
         self.act = nn.ReLU(True)
@@ -40,12 +40,12 @@ class gl_model(nn.Module):
         super(gl_model, self).__init__()
         self.net = nn.Sequential(
             nn.Conv2d(10, 24, (3,3), padding=(1,1), bias=True), 
-            nn.BatchNorm2d(24),
-            nn.Conv2d(24, 8, (3,3), padding=(1,1), bias=True),
+            # nn.BatchNorm2d(24),
+            nn.Conv2d(24, 12, (3,3), padding=(1,1), bias=True),
             nn.ReLU(True),
-            nn.BatchNorm2d(8),
-            *[resblock(8) for i in range(8)],
-            nn.Conv2d(8, 2, (1,1), padding=(0,0), bias=True),
+            # nn.BatchNorm2d(8),
+            *[resblock(12) for i in range(12)],
+            nn.Conv2d(12, 2, (1,1), padding=(0,0), bias=True),
             nn.ReLU(True),
         )
     def forward(self,x):
@@ -53,13 +53,13 @@ class gl_model(nn.Module):
 
 
 class dataset(Dataset):
-    idxs = range(1,12)
+    idxs = range(1,33)
     def __init__(self, state: str):
         
         super(dataset, self).__init__()
-        local_path = "/gl_data/{}_".format(state)
+        local_path = "/gldata/{}_".format(state)
         self.inputs, self.masks, self.labels = [],[],[]
-        choose = sample(dataset.idxs, 1)
+        choose = sample(dataset.idxs, 4)
         print("pack", end = ' ')
         for k in choose:
             print(k, end = ' ')
@@ -98,25 +98,39 @@ def training(train):
         masks = masks.cuda().float()
         labels = labels.cuda().float()
         output = model(inputs)
-        output[:,0,:,:] = torch.mul(output[:,0,:,:], masks)
-        output[:,1,:,:] = torch.mul(output[:,1,:,:], cross_mask)
         output_shape = list(output.shape)
-        output = output.reshape(output_shape[:-2]+[25*25,]).detach()
+        o1_ = torch.mul(output[:,0,:,:], masks)
+        o1 = o1_.reshape([output_shape[0],1,25,25])
+        o2_ = torch.mul(output[:,1,:,:], cross_mask)
+        o2 = o2_.reshape([output_shape[0],1,25,25])
+        output = torch.cat([o1,o2],dim = -3).requires_grad_(True)
+        output_shape = list(output.shape)
+        output = output.reshape(output_shape[:-2]+[25*25,])
         ans = torch.argmax(softmax(output,dim = -1), dim=-1)
-        print(output.shape,labels.shape)
         loss = lossfunc(output, labels)
         loss.requires_grad_(True)
         loss.backward()
+        # print(list(model.children())[0].weight.grad)
+        # print([x.grad for x in optimizer.param_groups[0]['params']])
+        # print(model.net[0].weight.grad)
+
+        # for name, parms in model.named_parameters(): 
+        #     print('-->name:', name, '-->grad_requirs:',parms.requires_grad, ' -->grad_value:',parms.grad)
+        #     a = input(":")
+
+        # a = input(":")
         optimizer.step()
         avaloss += loss.item()
-        labels_ans = torch.argmax(softmax(labels,dim = -1), dim=-1)
-        acc += (ans == labels_ans).sum().item()
+        labels = torch.argmax(labels, dim=-1)
+        acc += (ans == labels).sum().item()
+        
+        torch.cuda.empty_cache()
         if not i % rep[0]:
             avaloss /= rep[0]
             acc *= 100 / rep[0] / batch
             s = "[Epoch %2d, Data %4d] loss = %.2e acc = %2.2f%% lr = %.0e" % \
                 (k, i, avaloss, acc, optimizer.param_groups[0]["lr"])
-            print(s,end=""), file.write(s + "\n")
+            print(s), file.write(s + "\n")
             avaloss, acc = 0.0, 0
 
 def testing(test):
@@ -129,14 +143,18 @@ def testing(test):
             masks = masks.cuda().float()
             labels = labels.cuda().float()
             output = model(inputs)
-            output[:,0,:,:] = torch.mul(output[:,0,:,:], masks)
-            output[:,1,:,:] = torch.mul(output[:,1,:,:], cross_mask)
             output_shape = list(output.shape)
-            output = output.reshape(output_shape[:-2]+[25*25,]).detach()
+            o1 = torch.mul(output[:,0,:,:], masks).reshape([output_shape[0],1,25,25])
+            o2 = torch.mul(output[:,1,:,:], cross_mask).reshape([output_shape[0],1,25,25])
+            output = torch.cat([o1,o2],dim = -3)
+            output_shape = list(output.shape)
+            output = output.reshape(output_shape[:-2]+[25*25,])
             ans = torch.argmax(softmax(output,dim = -1), dim=-1)
             loss = lossfunc(output, labels)
-            avaloss += loss
+            avaloss += loss.item()
+            labels = torch.argmax(labels, dim=-1)
             acc += (ans == labels).sum().item()
+            torch.cuda.empty_cache()
             if not i % rep[1]:
                 allacc += acc
                 allloss += avaloss
@@ -169,6 +187,7 @@ if __name__ == '__main__':
     else:
         trained = 0
     lossfunc = nn.CrossEntropyLoss()
+    lossfunc.requires_grad_(True)
     if trained < epoch:
         print("training starting....")
         st = time()

@@ -125,9 +125,12 @@ def save(results, pack):
     shape1, shape2 = list(labels_train.shape), list(labels_test.shape)
     
     labels_train = labels_train.reshape(shape1[:-2]+[25*25,])
-    labels_train = np.argmax(labels_train, dim = -1)
+    labels_train = np.argmax(labels_train, axis = -1)
+    labels_train = labels_train.reshape(shape1[:-2]+[1,])
+
     labels_test = labels_test.reshape(shape2[:-2]+[25*25,])
-    labels_test = np.argmax(labels_test, dim = -1)
+    labels_test = np.argmax(labels_test, axis = -1)
+    labels_test = labels_test.reshape(shape2[:-2]+[1,])
 
     # print(labels_train.shape, labels_test.shape)
 
