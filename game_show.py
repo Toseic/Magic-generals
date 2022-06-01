@@ -95,7 +95,8 @@ if __name__ == '__main__':
                 break
             move_info = data["moves"][point]
         # if turn >= 140:
-        a = input("pause:")
+        # a = input("pause:")
+        time.sleep(0.8)
         turn += 1
     num = game.sum_army()
 
