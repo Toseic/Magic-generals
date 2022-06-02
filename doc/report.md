@@ -26,27 +26,30 @@
 
 此网站提供了通过api接口接入玩家的程序bot的服务，
 
-图片，
+<img width="934" alt="img2" src="https://user-images.githubusercontent.com/97432569/171527249-b5595391-871e-4d81-8f9e-6f900b8090c7.png">
 
 另外还提供了收集的对局数据供训练bot使用
 
-图片
+<img width="785" alt="img3" src="https://user-images.githubusercontent.com/97432569/171527351-265a0013-de67-4622-bb96-e2af565b970c.png">
+
+
 
 但是，当我们试着下载对局时:
 
-图片（链接是坏的）
+<img width="748" alt="img4" src="https://user-images.githubusercontent.com/97432569/171527398-3c5bc07d-c035-4e74-93fb-e18693fe2f44.png">
 
-但是网站的管理员认为这个链接不需要修复（坏了就坏了吧...）：
 
-图片
+但是网站的管理员并没有修复这个链接（坏了就坏了吧...）：
+
+<img width="531" alt="img5" src="https://user-images.githubusercontent.com/97432569/171528387-512f83f4-317b-4900-a83f-8e255f53e1b8.png">
 
 但是好在这个网站另外还提供了下载单次对局回放的功能：
 
-图片
+<img width="440" alt="img6" src="https://user-images.githubusercontent.com/97432569/171528503-ba4cb952-3bb9-4a6d-9c9c-a27086e42756.png">
 
 于是写了一个网络爬虫，爬取了排行榜上前三十的玩家，大约八万局数据：[link](https://github.com/Toseic/Generals.io_crawl)
 
-图片
+<img width="614" alt="img7" src="https://user-images.githubusercontent.com/97432569/171528605-c3ce6f31-169d-46c5-b4e3-9001e8f69152.png">
 
 
 
