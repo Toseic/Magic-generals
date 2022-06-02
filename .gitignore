@@ -1,4 +1,4 @@
-/img/
+*/*img*/*
 /ignore/
 *.rar
 *.pyc

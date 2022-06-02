@@ -1,7 +1,7 @@
 import sys,torch
 from click import get_app_dir
-# sys.path.append("E:\CodePalace\cpp code\AI-game\Magic-generals")
-from adapter import Adapter
+
+from AI.adapter import Adapter
 from copy import deepcopy
 import torch, torch.nn as nn
 from torch.nn.functional import softmax
@@ -17,15 +17,16 @@ def in_map(i, j):
 @torch.no_grad()
 def AIbot(k,length,width,visual_field_list,turn,model):
     cross_map = {
-        25*11+12: 0,
-        25*13+12: 1,
-        25*12+11: 2,
-        25*12+13: 3,
+        25*11+12: [-1,0],
+        25*13+12: [1,0],
+        25*12+11: [0,-1],
+        25*12+13: [0,1],
     }
     d_ij = [
         [-1,1,0,0],
         [0,0,-1,1],
     ]
+
     cross_mask_4 = [
         (0,11,12),
         (0,13,12),
@@ -49,15 +50,15 @@ def AIbot(k,length,width,visual_field_list,turn,model):
     ans_ = torch.argmax(softmax(output_L1, dim = -1), dim=-1)
     ans_ = [int(ans_/25), int(ans_%25)]
     time = 0
-    print("beg")
-    print(ans_)
+    # print("beg")
+    # print(ans_)
     for i in range(4):
         cross_mask[cross_mask_4[i]] = 0
         if in_map(ans_[0]+d_ij[0][i],ans_[1]+d_ij[1][i]):
             if (data[7][ans_[0]+d_ij[0][i]][ans_[1]+d_ij[1][i]] == 0):
                 cross_mask[cross_mask_4[i]] = 1
-                print(i)
-    print("end")
+                # print(i)
+    # print("end")
     
     mask = torch.cat([torch.from_numpy(mask_), cross_mask], dim=-3)
     output = torch.mul(output_, mask).reshape([2,625])
@@ -68,9 +69,12 @@ def AIbot(k,length,width,visual_field_list,turn,model):
         return []
     ans = [int(ans[0]), int(ans[1])]
     ans1 = cross_map[ans[1]]
+    
     ans0 = [int(ans[0]/25), ans[0]%25]
+    ans1[0] += ans0[0]
+    ans1[1] += ans0[1]
     # print([*ans0, 0, ans1])
-    return [*ans0, 0, ans1]
+    return [*ans0, 0, *ans1]
 
     
 
