@@ -128,6 +128,7 @@
 图片
 <img width="601" alt="img9" src="https://user-images.githubusercontent.com/97432569/171543289-e972619c-379b-4534-acbc-d67dbd71542f.png">
 <img width="602" alt="img10" src="https://user-images.githubusercontent.com/97432569/171543298-bbcefc73-9544-4dbf-bf01-1b70efc87a39.png">
+![img2](https://user-images.githubusercontent.com/97432569/171551458-3c3ab83d-b849-406d-bb70-4c0840e9e637.gif)
 
 
 
