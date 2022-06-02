@@ -71,8 +71,9 @@
 | 23    | 1786  |        |       |
 
 将地图放大到25*25，相较于原地图多出来的部分放置山峰，也就是士兵不能到达的地方，原地图嵌在新地图的左上方，。
+![img8](https://user-images.githubusercontent.com/97432569/171543245-73593ba7-ad3f-4b0b-8688-05cdecf95a44.png)
 
-<img src="C:\Users\Tosey\Desktop\img8.png" alt="img8" style="zoom: 33%;" />
+
 
 #### 输入：
 
@@ -102,9 +103,10 @@
 
 使用了二维卷积，12层resblock
 
-![model](C:\Users\Tosey\Desktop\model.svg)
+![model](https://user-images.githubusercontent.com/97432569/171543260-9eb8c905-708c-4259-b8fa-29247bf9a04a.svg)
+<img width="775" alt="model2" src="https://user-images.githubusercontent.com/97432569/171543273-8a51da14-f9db-46eb-8d13-1020e01c1eba.png">
 
-<img src="C:\Users\Tosey\Desktop\model2.png" alt="model2" style="zoom:50%;" />
+
 
 ## UI部分
 
@@ -124,6 +126,8 @@
 缺点：画质较低（屏幕兼容问题）
 
 图片
+<img width="601" alt="img9" src="https://user-images.githubusercontent.com/97432569/171543289-e972619c-379b-4534-acbc-d67dbd71542f.png">
+<img width="602" alt="img10" src="https://user-images.githubusercontent.com/97432569/171543298-bbcefc73-9544-4dbf-bf01-1b70efc87a39.png">
 
 
 
