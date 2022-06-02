@@ -14,7 +14,7 @@ import numpy as np
 
 def Adapter(v_f_l, id, turn):
     info = np.zeros((10,25,25))
-    info[7] = np.ones((1,25,25))*-1
+    info[7] = np.ones((1,25,25))*1
 
     height = len(v_f_l)
     width = len(v_f_l[0])
@@ -26,7 +26,7 @@ def Adapter(v_f_l, id, turn):
                 info[7][i][j] = 0
             # city
             if data[1] == 1:
-                army_num = data[2][0][0]
+                army_num = abs(data[2][0][0])
                 if data[2][0][1] == -1:
                     info[6][i][j] = army_num
                 elif data[2][0][1] == id:
@@ -39,7 +39,7 @@ def Adapter(v_f_l, id, turn):
             # square
             elif data[1] == 0:
                 if not data[2]: continue
-                army_num = data[2][0][0]
+                army_num = abs(data[2][0][0])
                 data_id = data[2][0][1]
                 if data_id == id:
                     info[0][i][j] = army_num
@@ -47,7 +47,7 @@ def Adapter(v_f_l, id, turn):
                     info[1][i][j] = army_num 
             # general         
             elif data[1] == 2:
-                army_num = data[2][0][0]
+                army_num = abs(data[2][0][0])
                 data_id = data[2][0][1]
                 if data_id == id:
                     info[4][i][j] = 1
@@ -59,5 +59,8 @@ def Adapter(v_f_l, id, turn):
                     info[1][i][j] = army_num 
 
     info[8] = np.int8(info[2] > np.zeros((25,25))) * (turn%2)
-    info[9] = np.int8(info[0] > np.zeros((25,25))) * (turn%2)
-    return info, info[0].copy()
+    info[9] = np.int8(info[0] > np.zeros((25,25))) * (turn)
+    legal_mask =  info[0].copy()
+    legal_mask = np.multiply(legal_mask, np.int8(legal_mask > np.ones((25,25))))
+    legal_mask = np.int8(legal_mask > np.zeros((25,25)))
+    return info, legal_mask

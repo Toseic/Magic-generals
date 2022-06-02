@@ -1,19 +1,14 @@
+#解决了。
+
+
 import pygame, collections, random, threading
-# from naive import naive
-import torch
-# from AI_model import gl_model
-
-
-import sys,time
-sys.path.append("E:\CodePalace\cpp code\AI-game\Magic-generals")
-sys.path.append("../")
-from net_bot import AIbot
-import torch, torch.nn as nn
+from UI.naive import naive
+import sys,torch,time
 from AI_model import gl_model
-from adapter import Adapter
-from copy import deepcopy
+from net_bot import AIbot
 
-        
+
+
 class general_game:
     def __init__(self):
         self.width = random.randint(18, 23)
@@ -21,6 +16,7 @@ class general_game:
         self.size = self.width*self.length
         self.draw_start_point = [400-self.width*12.5,300-self.length*12.5]
         self.map_list = [[[0, []]for i in range(self.width)]for j in range(self.length)]
+        self.visual_field_list=[[[[False,-1,[]]for i in range(self.width)]for j in range(self.length)] for k in [0, 1]]
         self.city_list=[]
         # self.water_list=[]
         self.general_list=[]
@@ -32,14 +28,14 @@ class general_game:
         #mountain initialize
         for i in range(1,self.length-1):
             for j in range(1,self.width-1):
-                if random.random() > 0.8:
+                if random.random() > 0.9:
                     self.map_list[i][j][0] = 3
-
         for i in range(1,self.length-1):
             for j in range(1,self.width-1):
                 if not self.map_list[i][j][0]:
-                    k=sum([self.map_list[i+m][j+n][0]==3 for m in [-1,1] for n in [-1,1]])\
-                        -sum([self.map_list[i+m][j+n][0]==3 for m in range(-1,2) for n in [[1,-1],[0]][m]])
+                    k=sum([self.map_list[i+m][j+n][0]==3 for m in [-1,1] 
+                        for n in [-1,1]])-sum([self.map_list[i+m][j+n][0]==3 for m in range(-1,2) 
+                        for n in [[1,-1],[0]][m]])
                     if random.random() < 0.1*k:
                         self.map_list[i][j][0] = -1
         for i in range(1,self.length-1):
@@ -83,18 +79,18 @@ class general_game:
             if not self.map_list[i][j][0]:
                 city_number-=1
                 self.map_list[i][j][0]=1
-                self.map_list[i][j][1].append([int(abs(random.gauss(30,5))),-1])
+                self.map_list[i][j][1].append([int(random.randint(40,50)),-1])
                 self.city_list.append(self.map_list[i][j])
         return
     
     def general_change(self, a, *args):
         global game_running, winner
-        if len(args):
+        if args:
             game_running = 0
             winner = -1
             for i in self.map_list:
                 for block in i:
-                    if len(block[1]) and block[1][0][1] != -1:
+                    if block[1] and block[1][0][1] != -1:
                         block[1].clear()
             return
         else:
@@ -151,7 +147,7 @@ class general_game:
     def in_de_compute(self):
         for i in self.map_list:
             for block in i:
-                if len(block[1]):
+                if block[1]:
                     if not block[0]:
                         block[1][0][0]+=1
                     elif block[0]==1 and block[1][0][1] == -1:
@@ -172,7 +168,7 @@ class general_game:
                     acting[1]-=1
                 else:
                     acting[1]+=1
-                if len(block_moving) and block_moving[0][0]>1 and block_moving[0][1] == i and \
+                if block_moving and block_moving[0][0]>1 and block_moving[0][1] == i and \
                     0<=acting[0]<self.length and 0<=acting[1]<self.width and self.map_list[acting[0]][acting[1]][0] != 3:
                     if not acting[2]:
                         army_moving = block_moving[0][0]-1
@@ -185,7 +181,7 @@ class general_game:
         for i in self.map_list:
             for block in i:
                 self.battle(block)
-        if len(self.general_battle_list):
+        if self.general_battle_list:
             self.general_battle()
         return
 
@@ -199,52 +195,50 @@ class general_game:
             self.in_de_compute_clock=50
         return
 
-    def visual_field(self, k):
-        visual_list=[[0 for i in range(self.width+2)]for j in range(self.length+2)]
-        for i in range(self.length):
-            for j in range(self.width):
-                if len(self.map_list[i][j][1]) and self.map_list[i][j][1][0][1] == k:
-                    visual_list[i+1][j+1]=1
-        for i in range(self.length+2):
-            for j in range(self.width+2):
-                if visual_list[i][j]==1:
-                    visual_list[i-1][j-1]=visual_list[i-1][j]=\
-                    visual_list[i-1][j+1]=visual_list[i][j-1]=\
-                    visual_list[i][j+1]=visual_list[i+1][j-1]=\
-                    visual_list[i+1][j]=visual_list[i+1][j+1]=2
-        for i in range(self.length+2):
-            for j in range(self.width+2):
-                if visual_list[i][j]==2:
-                    visual_list[i][j]=1
-        visual_field_list=[[[False,-1,[]]for i in range(self.width)]for j in range(self.length)]
-        for i in range(self.length):
-            for j in range(self.width):
-                if visual_list[i+1][j+1]:
-                    visual_field_list[i][j][0] = True
-                    visual_field_list[i][j][1] = self.map_list[i][j][0]
-                    if len(self.map_list[i][j][1]):
-                        visual_field_list[i][j][2].append(
-                            [
-                                self.map_list[i][j][1][0][0],
-                                self.map_list[i][j][1][0][1]
-                            ]
-                        )
-                elif self.map_list[i][j][0] == 3 or self.map_list[i][j][0] == 4:
-                    visual_field_list[i][j][1] = self.map_list[i][j][0]
-        return visual_field_list
+    def visual_field_list_generate(self):
+        self.visual_field_list=[[[[False,-1,[]]for i in range(self.width)]for j in range(self.length)] for k in [0, 1]]
+        for k in [0, 1]:
+            visible_check=[[0 for i in range(self.width+2)]for j in range(self.length+2)]
+            for i in range(self.length):
+                for j in range(self.width):
+                    if self.map_list[i][j][1] and self.map_list[i][j][1][0][1] == k:
+                        visible_check[i+1][j+1]=1
+            for i in range(self.length+2):
+                for j in range(self.width+2):
+                    if visible_check[i][j]==1:
+                        visible_check[i-1][j-1]=visible_check[i-1][j]=visible_check[i-1][j+1]=visible_check[i][j-1]=visible_check[i][j+1]=visible_check[i+1][j-1]=visible_check[i+1][j]=visible_check[i+1][j+1]=2
+            for i in range(self.length+2):
+                for j in range(self.width+2):
+                    if visible_check[i][j]==2:
+                        visible_check[i][j]=1
+
+            for i in range(self.length):
+                for j in range(self.width):
+                    if visible_check[i+1][j+1]:
+                        self.visual_field_list[k][i][j][0] = True
+                        self.visual_field_list[k][i][j][1] = self.map_list[i][j][0]
+                        if self.map_list[i][j][1]:
+                            self.visual_field_list[k][i][j][2].append(
+                                [
+                                    self.map_list[i][j][1][0][0],
+                                    self.map_list[i][j][1][0][1]
+                                ]
+                            )
+                    elif self.map_list[i][j][0] == 3:
+                        self.visual_field_list[k][i][j][1] = 3
+        return
 
     def ai_act(self, k):
         for i in range(k,2):
             act_list[i].append(AIbot(
-                i,
-                self.length,
-                self.width,
-                self.visual_field(i),
-                self.in_de_compute_clock,
-                model,
+            i,
+            self.length,
+            self.width,
+            self.visual_field_list[i],
+            self.in_de_compute_clock,
+            model,
             ))
         return
-
 
 
 class army:
@@ -266,37 +260,143 @@ class army:
 def man_dist(x1,y1,x2,y2):
     return abs(x1-x2)+abs(y1-y2)
 
+class event_listen:
+    def __init__(self, game:general_game):
+        self.width = [game.draw_start_point[0], game.draw_start_point[0]+25*game.width]
+        self.length = [game.draw_start_point[1], game.draw_start_point[1]+25*game.length]
+        self.down_pos = []
+        self.up_pos = []
+        self.choose_block = []
+        self.action = []
+    
+    def listen(self, mode):
+        global running, act_list
+        for event in pygame.event.get():
+            print(event)
+            if event == pygame.QUIT:
+                running = 0
+                print("0")
+                return
+            if not mode:
+                # if event == pygame.MOUSEMOTION:
+                #     if self.width[0]<=event.pos[0]<=self.width[1] and len[0]<=event.pos[1]<len[1]:
+                #         new_motion=[int((event.pos[0]-self.width[0])/25)+1,int((event.pos[1]-self.length[0])/25)+1]
+                #     else:
+                #         new_motion=[]
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    self.down_pos=[int((event.pos[0]-self.width[0])/25)+1,int((event.pos[1]-self.length[0])/25)+1]
+                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    self.up_pos=[int((event.pos[0]-self.width[0])/25)+1,int((event.pos[1]-self.length[0])/25)+1]
+                    if self.down_pos==self.up_pos:
+                        if self.up_pos:
+                            if not self.choose_block or self.choose_block[:2]!=self.up_pos:
+                                self.choose_block=[self.up_pos[0], self.up_pos[1], 0]
+                            else:
+                                self.choose_block[2] = not self.choose_block[2]
+                    else:
+                        self.choose_block.clear()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key in [pygame.K_UP, 119]:
+                        self.choose_block.append(self.choose_block[0]-1)
+                        self.choose_block.append(self.choose_block[1])
+                    elif event.key in [pygame.K_LEFT, 97]:
+                        self.choose_block.append(self.choose_block[0])
+                        self.choose_block.append(self.choose_block[1]-1)
+                    elif event.key in [pygame.K_DOWN, 115]:
+                        self.choose_block.append(self.choose_block[0]+1)
+                        self.choose_block.append(self.choose_block[1])
+                    elif event.key in [pygame.K_RIGHT, 100]:
+                        self.choose_block.append(self.choose_block[0])
+                        self.choose_block.append(self.choose_block[1]+1)
+                    if len(self.choose_block)==5:
+                        act_list[0].append([].extend(self.choose_block))
+                        self.choose_block=self.choose_block[-2:].append(0)
+        return
 
-def game_listen():
-    global game_running
-    while game_running:
-        
-        event_list.append(pygame.event.get())
-        time.sleep(0.1)
-    return
+# def game_listen(game:general_game):
+#     global game_running, running, act_list
+#     width = [game.draw_start_point[0], game.draw_start_point[0]+25*game.width]
+#     length = [game.draw_start_point[1], game.draw_start_point[1]+25*game.length]
+#     choose_block = []
+#     action = []
+#     print("3")
+#     while game_running and running:
+#         for event in pygame.event.get():
+#             if event == pygame.QUIT:
+#                 running = 0
+#                 break
+#             elif event == pygame.MOUSEMOTION:
+#                 if width[0]<=event.pos[0]<=width[1] and len[0]<=event.pos[1]<len[1]:
+#                     new_motion=[int((event.pos[0]-width[0])/25)+1,int((event.pos[1]-length[0])/25)+1]
+#                 else:
+#                     new_motion=[]
+#             elif event == pygame.MOUSEBUTTONDOWN and event.button == 1:
+#                 down_pos=new_motion
+#             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+#                 up_pos=new_motion
+#                 if down_pos==up_pos:
+#                     if up_pos:
+#                         if not choose_block:
+#                             choose_block=[new_motion[0], new_motion[1], 0]
+#                         else:
+#                             choose_block[2] = 1
+#                 else:
+#                     choose_block.clear()
+#             elif event.tpye == pygame.KEYDOWN:
+#                 if event.key in [pygame.K_UP, 119]:
+#                     choose_block.append(0)
+#                     action.extend(choose_block)
+#                     action.append(0)
+#                 elif event.key in [pygame.K_LEFT, 97]:
+#                     choose_block.append(2)
+#                 elif event.key in [pygame.K_DOWN, 115]:
+#                     choose_block.append(1)
+#                 elif event.key in [pygame.K_RIGHT, 100]:
+#                     choose_block.append(3)
+#     return
 
 
 def game_ui(mode, game: general_game):
-    global game_running
+    global game_running, running
+    listen = event_listen(game)
     tiktok=pygame.time.Clock()
     ui_compute_clock = 15
     game.in_de_compute_clock = 50
+    begin = False
     if mode:
-        while game_running:
+        times = 0
+        while game_running and running:
+            times += 1
             tiktok.tick(2)
             game.game_compute()
-            game.ai_act(0)
+            game.visual_field_list_generate()
+            listen.listen(mode)
+            if begin:
+                game.ai_act(0)
+            else:
+                time.sleep(0.5)
+                if times > 5:
+                    begin = True
             game_display(mode, game)
+            time.sleep(0.55)
     else:
-        while game_running:
+        while game_running and running:
             tiktok.tick(30)
-            game_event_to_act()
             ui_compute_clock-=1
             if not ui_compute_clock:
                 ui_compute_clock=15
                 game.game_compute()
-                game.ai_act(1)
+                game.visual_field_list_generate()
+                listen.listen(mode)
+                if begin:
+                    game.ai_act(1)
+                else:
+                    time.sleep(0.5)
+                    if times > 5:
+                        begin = True
             game_display(mode, game)
+            time.sleep(0.55)
+
     return
 
 
@@ -313,7 +413,12 @@ def game_ui(mode, game: general_game):
 
 
 def game_event_to_act():
-    global running
+    global running, event_list
+    while len(event_list):
+        event_now = event_list.popleft()
+        if event_now == pygame.QUIT:
+            running = 0
+            break
 
     return
 
@@ -362,7 +467,7 @@ def game_display(mode, game: general_game):
                 if block[1] == 3:
                     block_image(0, i, j, game)
             else:
-                if len(block[2]):
+                if block[2]:
                     get_block_army = [block[2][0][0],block[2][0][1]]
                     if get_block_army[1]>-1:
                         block_rect(game.army_list[get_block_army[1]].color, i, j, game)
@@ -395,7 +500,7 @@ def block_paintablize(mode, i ,j, game:general_game):
     if mode:
         return [True, game.map_list[i][j][0], game.map_list[i][j][1]]
     else:
-        return game.visual_field[i][j][0]
+        return game.visual_field_list[0][i][j]
 
 
 def block_rect(color, i, j, game:general_game):
@@ -467,10 +572,7 @@ def game_main(mode):
         game.army_list.append(army(i, game.general_list[i], color_list[i]))
     game_running=1
     project.fill([31, 31, 31])
-    thread_event=threading.Thread(target=game_listen, args=())
-    thread_logic=threading.Thread(target=game_ui, args=(mode, game,))
-    thread_event.start()
-    thread_logic.start()
+    game_ui(mode,game)
     return
 
 def main():
@@ -478,9 +580,6 @@ def main():
     pygame.init()
     project = pygame.display.set_mode((800, 600))
     pygame.display.set_caption("双城之战")
-    fclock = pygame.time.Clock()
-    fps = 40
-    fclock.tick(fps)
     running = 1
     image_list=[pygame.image.load("./UI/mountain.png"),pygame.image.load("./UI/city.png"),pygame.image.load("./UI/general.png")]
     for i in range(3):
@@ -512,7 +611,8 @@ def main():
                     if key == 4:
                         game_main(1)
                     if key == 5:
-                        sys.exit()
+                        running = 0
+                        break
             elif event.type == pygame.MOUSEMOTION:
                 if 340<=event.pos[0]<=460 and 187.5<=event.pos[1]<562.5:
                     new_motion=int((event.pos[1]-112.5)/75)
@@ -533,9 +633,11 @@ def main():
                     if key == 4:
                         game_main(1)
                     if key == 5:
-                        sys.exit()
+                        running = 0
+                        break
             elif event.type == pygame.QUIT:
-                sys.exit()
+                running = 0
+                break
         if key_1 != key:
             Title_Ilist[key].choose_title(0)
             if key_1 < 1:
